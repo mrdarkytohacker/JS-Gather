@@ -1,0 +1,47 @@
+#!/bin/bash
+
+# Function to fetch JavaScript files from a given URL
+fetch_js_files() {
+    local url=$1
+    echo "Fetching JavaScript files from: $url"
+    
+    # Use curl to fetch the page, then grep for .js files
+    curl -s "$url" | grep -oP 'https?://[^"'\'' ]+\.js' | sort -u
+}
+
+# Function to get subdomains using DNS queries
+get_subdomains() {
+    local domain=$1
+    echo "Fetching subdomains for: $domain"
+
+    # Example list of common subdomains (this can be expanded)
+    local common_subdomains=("www" "api" "blog" "dev" "test" "shop")
+
+    for sub in "${common_subdomains[@]}"; do
+        # Check if the subdomain exists using the 'host' command
+        if host "$sub.$domain" > /dev/null 2>&1; then
+            echo "$sub.$domain"
+        fi
+    done
+}
+
+# Main script execution
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <domain>"
+    exit 1
+fi
+
+domain=$1
+
+# Get subdomains
+subdomains=$(get_subdomains "$domain")
+
+# Fetch JavaScript files from the main domain
+fetch_js_files "http://$domain"
+fetch_js_files "https://$domain"
+
+# Fetch JavaScript files from each subdomain
+for sub in $subdomains; do
+    fetch_js_files "http://$sub"
+    fetch_js_files "https://$sub"
+done
